@@ -20,7 +20,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 package com.hotwire.imageassert.report
@@ -41,10 +40,11 @@ class HTMLReportResultListener(val outputDir: File) : ResultListener {
     val results = ArrayList<Map<String, Any>>()
 
     @Throws(IOException::class)
-    fun extractResource(name: String, outputDir: File) {
-        val inputStream = HTMLReportResultListener::class.java.getResourceAsStream(name)
+    fun extractResource(resource: String, file: File) {
+        val inputStream = HTMLReportResultListener::class.java.getResourceAsStream(resource)
         try {
-            outputDir.writeBytes(inputStream.readBytes());
+            file.parentFile.apply { if (!exists() && !mkdirs()) throw IOException("Could not create directory ${canonicalPath}") }
+            file.writeBytes(inputStream.readBytes());
         } finally {
             inputStream.close()
         }
@@ -72,16 +72,15 @@ class HTMLReportResultListener(val outputDir: File) : ResultListener {
         results.add(map)
     }
 
-    fun saveReport() {
-        try {
-            val json = Gson().toJson(results).replace(outputDir.absolutePath.toRegex(), ".")
-            File(outputDir, "report.json").writeBytes(json.toByteArray())
-            extractResource("index.html", File(outputDir, "index.html"))
-            extractResource("css/style.css", File(outputDir, "css/style.css"))
-            extractResource("js/engine.js", File(outputDir, "js/engine.js"))
-            extractResource("js/jquery-1.11.3.min.js", File(outputDir, "js/jquery-1.11.3.min.js"))
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+    fun saveReport() = try {
+        if (!outputDir.exists() && !outputDir.mkdirs()) throw IOException("Could not create directory $outputDir!")
+        val json = Gson().toJson(results).replace(outputDir.absolutePath.toRegex(), ".")
+        File(outputDir, "report.json").writeBytes(json.toByteArray())
+        extractResource("index.html", File(outputDir, "index.html"))
+        extractResource("css/style.css", File(outputDir, "css/style.css"))
+        extractResource("js/engine.js", File(outputDir, "js/engine.js"))
+        extractResource("js/jquery-1.11.3.min.js", File(outputDir, "js/jquery-1.11.3.min.js"))
+    } catch (e: IOException) {
+        throw RuntimeException(e)
     }
 }
