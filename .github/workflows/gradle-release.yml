@@ -12,5 +12,5 @@ jobs:
           java-version: 8
       - uses: eskatos/gradle-command-action@v1
         with:
-          arguments: publish
+          arguments: publishMavenLocalPublicationToMavenLocal
           repo-token: ${{ secrets.MY_GH_TOKEN }}
