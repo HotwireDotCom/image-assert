@@ -90,7 +90,7 @@ object ImageMagick {
      * @return Result instance containing diff image and difference in pixels.
      */
     fun compare(actual: Image, expected: Image): Result {
-        val process = start("compare", "-define", "stream:buffer-size=0", "-fuzz", "17%", "-metric", "AE", "miff:-", "png:-")
+        val process = start("compare", "-define", "stream:buffer-size=0", "-fuzz", "17%", "-metric", "AE", "miff:-", "-quiet", "png:-")
         write(process.outputStream, convertToMiff(actual), convertToMiff(expected))
 
         val asyncTaskPool = AsyncTaskPool()
@@ -115,7 +115,7 @@ object ImageMagick {
      * Copy alpha-channel.
      */
     fun copyOpacity(image: Image, mask: Image): Image {
-        val process = start("convert", "-define", "stream:buffer-size=0", "miff:-", "-alpha", "off", "-compose", "copy-opacity", "-composite", "png:-")
+        val process = start("convert", "-define", "stream:buffer-size=0", "miff:-", "-alpha", "off", "-compose", "copy-opacity", "-composite", "-quiet", "png:-")
         write(process.outputStream, convertToMiff(image), convertToMiff(mask))
         val bytes = AsyncReader.read(process.inputStream)
         val output = read(process.errorStream)
@@ -126,10 +126,44 @@ object ImageMagick {
     }
 
     /**
+     * Call the **convert** executable, to build a PNG image
+     *
+     * @param inputStream stream of ImageMagic compatible input format
+     * @param pageNumber number of the page to convert in the multipage source (like PDF)
+     * @param density pixel density of the output image, default value 300
+     * @param quality image quality from 0 (poor quality) to 100 (highest quality).
+     * @param backgroundColor desired background color
+     */
+    fun convertToPng(inputStream: InputStream, pageNumber: Number = 0, density: Int = 300, quality: Int = 90, backgroundColor: String = "white"): Image {
+        val image = Image.load(inputStream)
+        val process = start("convert", "-[" + pageNumber + "]", "-density", density.toString(), "-background", backgroundColor, "-quality", quality.toString(), "-quiet", "png:-")
+        write(process.outputStream, image)
+        val bytes = AsyncReader.read(process.inputStream)
+        val output = read(process.errorStream)
+        wait(process)
+        if (output != null) LOGGER.warning(output)
+        if (process.exitValue() != 0) throw RuntimeException()
+        return Image.load(bytes)
+    }
+
+    /**
+     * Resize image.
+     */
+    fun resize(source: Image, resize: String = "50%"): Image {
+        val process = start("convert", "-", "-resize", resize, "-quiet", "-")
+        write(process.outputStream, source)
+        val output = read(process.errorStream)
+        if (output != null) {
+            LOGGER.finest(output)
+        }
+        return Image.load(process.inputStream)
+    }
+
+    /**
      * Fill image with solid color.
      */
     fun fill(source: Image): Image {
-        val process = start("convert", "-", "-fill", "white", "-colorize", "100%", "-")
+        val process = start("convert", "-", "-fill", "white", "-colorize", "100%", "-quiet", "-")
         write(process.outputStream, source)
         val output = read(process.errorStream)
         if (output != null) {
@@ -143,7 +177,7 @@ object ImageMagick {
      */
     fun rectangle(source: Image, rectangle: Rectangle): Image {
         val format = "rectangle %d,%d %d,%d".format(rectangle.x, rectangle.y, rectangle.x + rectangle.width, rectangle.y + rectangle.height)
-        val process = start("convert", "-", "-fill", "black", "-draw", format, "-")
+        val process = start("convert", "-", "-fill", "black", "-draw", format, "-quiet", "-")
         write(process.outputStream, source)
         val output = read(process.errorStream)
         if (output != null) {
@@ -156,7 +190,7 @@ object ImageMagick {
      * Remove alpha-channel.
      */
     fun removeAlpha(file: Image): Image {
-        val process = start("convert", "png:-", "-alpha", "off", "png:-")
+        val process = start("convert", "png:-", "-alpha", "off", "-quiet", "png:-")
         write(process.outputStream, file)
         val bytes = AsyncReader.read(process.inputStream)
         val output = read(process.errorStream)
@@ -168,10 +202,10 @@ object ImageMagick {
 
 
     /**
-     * Convert png to Magic Image File Format - ImageMagick's input stream doesn't support reading morethan one png files
+     * Convert png to Magic Image File Format - ImageMagick's input stream doesn't support reading more than one png files
      */
     fun convertToMiff(source: Image): Image {
-        val process = start("convert", "-",  "miff:-")
+        val process = start("convert", "-", "-quiet",  "miff:-")
         write(process.outputStream, source)
         val bytes = AsyncReader.read(process.inputStream)
         val output = read(process.errorStream)
