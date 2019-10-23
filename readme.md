@@ -12,12 +12,12 @@ ImageMagick 6.9.0+ must be installed and added to PATH variable
 <dependency>
 	<groupId>com.hotwire.image-assert</groupId>
 	<artifactId>image-assert</artifactId>
-	<version>1.0.5</version>
+	<version>1.1.1</version>
 </dependency>
 ```
 ###### Gradle
 ```
-'com.hotwire.image-assert:image-assert:1.0.5'
+'com.hotwire.image-assert:image-assert:1.1.1'
 ```
 
 #### Usage

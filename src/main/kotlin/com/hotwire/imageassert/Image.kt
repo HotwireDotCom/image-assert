@@ -25,6 +25,7 @@
 
 package com.hotwire.imageassert
 
+import com.hotwire.imageassert.imagemagick.ImageMagick
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
@@ -71,7 +72,7 @@ class Image private constructor(private val bytes: ByteArray) {
 
         @JvmStatic fun load(source: InputStream): Image {
             try {
-                val bytes = source.readBytes(source.available())
+                val bytes = source.readBytes()
                 return Image(bytes)
             } catch (e: IOException) {
                 throw RuntimeException("Failed to copy stream!", e)
@@ -81,6 +82,22 @@ class Image private constructor(private val bytes: ByteArray) {
         @JvmStatic fun load(source: File): Image {
             try {
                 return load(FileInputStream(source))
+            } catch (e: FileNotFoundException) {
+                throw RuntimeException("File does not exist!", e)
+            }
+        }
+
+        @JvmStatic fun toPng(source: InputStream, pageNumber: Number, density: Int = 300, quality: Int = 90, backgroundColor: String = "white"): Image {
+            try {
+                return ImageMagick.convertToPng(source, pageNumber, density, quality, backgroundColor)
+            } catch (e: IOException) {
+                throw RuntimeException("Failed to convert PDF stream!", e)
+            }
+        }
+
+        @JvmStatic fun toPng(source: File, pageNumber: Number, density: Int = 300, quality: Int = 90, backgroundColor: String = "white"): Image {
+            try {
+                return toPng(FileInputStream(source), pageNumber, density, quality, backgroundColor)
             } catch (e: FileNotFoundException) {
                 throw RuntimeException("File does not exist!", e)
             }
